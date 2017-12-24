@@ -1,5 +1,6 @@
 package com.example.banhnhandau.mycooking.eating;
 
+import android.database.Cursor;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -11,16 +12,15 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.example.banhnhandau.mycooking.BaseFragment;
+import com.example.banhnhandau.mycooking.MainActivity;
 import com.example.banhnhandau.mycooking.R;
-import com.example.banhnhandau.mycooking.type.Type;
-import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
 
 import org.json.JSONArray;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,8 +39,6 @@ public class FragmentEating extends BaseFragment  {
     String nameType;
     TextView txtToolType;
     ImageView back1;
-    AsyncHttpClient client = new AsyncHttpClient();
-    Gson gson = new Gson();
 
     public static FragmentEating newInstance(int idType, String nameType) {
         Bundle args = new Bundle();
@@ -57,7 +55,6 @@ public class FragmentEating extends BaseFragment  {
     public int getViewLayot() {
         return R.layout.fragment_eating;
     }
-
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
@@ -86,8 +83,8 @@ public class FragmentEating extends BaseFragment  {
         adapter = new AdapterEating(getContext(),eatings);
         rcvEating.setAdapter(adapter);
 
-//        getDataEating();
-        getDataJsonArrayEating();
+        getDataEating();
+//        getDataJsonArrayEating();
 
     }
 
@@ -100,9 +97,13 @@ public class FragmentEating extends BaseFragment  {
                 super.onSuccess(statusCode, headers, response);
                 if (progressDialog.isShowing())progressDialog.cancel();
                 Log.d("response", response.toString());
-                java.lang.reflect.Type listType = new TypeToken<List<Eating>>(){}.getType();
+                Type listType = new TypeToken<List<Eating>>(){}.getType();
                 List<Eating> listResponse = gson.fromJson(response.toString(), listType);
                 eatings.addAll(listResponse) ;
+                for(int i = 0; i < eatings.size(); i++){
+                    MainActivity.dataBaseHelper.QueryData("INSERT INTO eating " +
+                            "VALUES ("+eatings.get(i).getId()+",'"+eatings.get(i).getName()+"','','','"+eatings.get(i).getImage()+"','',"+idType+",0)");
+                }
                 adapter.notifyDataSetChanged();
             }
 
@@ -113,40 +114,36 @@ public class FragmentEating extends BaseFragment  {
         });
     }
 
-//    private void getDataEating() {
-//        Cursor data = MainActivity.dataBaseHelper.
-//                GetData("SELECT * FROM eating WHERE idType = " + idType);
-//        while (data.moveToNext()) {
-//            int id = data.getInt(0);
-//            Log.d("id", id + " ");
-//            String name = data.getString(1);
-//            String material = data.getString(2);
-//            String making = data.getString(3);
-//            byte[] img = data.getBlob(4);
-//            String tips = data.getString(5);
-//            int idType = data.getInt(6);
-//            int bookmark = data.getInt(7);
-//
-//            Eating eating = new Eating();
-//            eating.setId(id);
-//            eating.setName(name);
-//            eating.setMaterial(material);
-//            eating.setMaking(making);
-//            eating.setImg(img);
-//            eating.setTips(tips);
-//            eating.setIdType(idType);
-//            eating.setBookmark(bookmark);
-//
-//            eatings.add(eating);
-//        }
-//        //if(eatings.size()==0)
-//            //getDataOnline()
-//            //if CheckInternet
-//            //co getdataongline
-//            //ko thongbao ko co data
-//
-//        adapter.notifyDataSetChanged();
-//    }
+    private void getDataEating() {
+        Cursor data = MainActivity.dataBaseHelper.
+                GetData("SELECT * FROM eating WHERE idType = " + idType);
+        while (data.moveToNext()) {
+            int id = data.getInt(0);
+            String name = data.getString(1);
+            String material = data.getString(2);
+            String making = data.getString(3);
+            String img = data.getString(4);
+            String tips = data.getString(5);
+            int idType = data.getInt(6);
+            int bookmark = data.getInt(7);
+
+            Eating eating = new Eating();
+            eating.setId(id);
+            eating.setName(name);
+            eating.setMaterial(material);
+            eating.setMaking(making);
+            eating.setImage(img);
+            eating.setTips(tips);
+            eating.setIdType(idType);
+            eating.setBookmark(bookmark);
+
+            eatings.add(eating);
+        }
+        adapter.notifyDataSetChanged();
+        if(eatings.size() == 0){
+            getDataJsonArrayEating();
+        }
+    }
 
 //    @Override
 //    public void onBookmarkListener(int position) {
@@ -168,6 +165,11 @@ public class FragmentEating extends BaseFragment  {
 
     public void updateData(){
         eatings.clear();
-//        getDataEating();
+        getDataEating();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
     }
 }
