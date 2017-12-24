@@ -3,6 +3,7 @@ package com.example.banhnhandau.mycooking.video;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Gravity;
@@ -39,6 +40,8 @@ public class FragmentVideo extends BaseFragment {
     LinearLayoutManager layoutManager;
     ImageView menu;
     TextView txtChanel;
+    SwipeRefreshLayout swChanel;
+
 
     public static final String API_KEY = "AIzaSyDe3M_3jUpKhHvc8EdZ3Uvt0KS-4rSnabE";
     String ID_PLAY_LIST = "PLIqf0aj-QeToj2hsz6cxnuSO4hqtB_GEx";
@@ -70,6 +73,15 @@ public class FragmentVideo extends BaseFragment {
         txtChanel = (TextView) myView.findViewById(R.id.txtChanel);
         Typeface custom_font = Typeface.createFromAsset(getContext().getAssets(), "SVN-Dessert Menu Script.ttf");
         txtChanel.setTypeface(custom_font);
+        swChanel = (SwipeRefreshLayout) myView.findViewById(R.id.swChanel);
+        swChanel.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                getJsonYouTube(urlGetJson);
+                swChanel.setRefreshing(false);
+            }
+        });
+
 
         rcvVideo = (RecyclerView) myView.findViewById(R.id.rcvVideo);
         layoutManager = new LinearLayoutManager(getActivity());
@@ -77,49 +89,54 @@ public class FragmentVideo extends BaseFragment {
         rcvVideo.setLayoutManager(layoutManager);
         adapter = new AdapterVideo(getContext(), videos);
         rcvVideo.setAdapter(adapter);
-        if (!isInternetAvailable()) {
-            dialogNetwork();
-        } else {
-            getJsonYouTube(urlGetJson);
-        }
+        getJsonYouTube(urlGetJson);
 
     }
 
     private void getJsonYouTube(String url) {
-        final RequestQueue requestQueue = Volley.newRequestQueue(getContext());
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
-                try {
-                    JSONArray jsonItems = response.getJSONArray("items");
-                    String title = "";
-                    String url = "";
-                    String idVideo = "";
-                    for (int i = 0; i < jsonItems.length(); i++) {
-                        JSONObject jsonItem = jsonItems.getJSONObject(i);
-                        JSONObject jsonSnippet = jsonItem.getJSONObject("snippet");
-                        title = jsonSnippet.getString("title");
-                        JSONObject jsonThumbnail = jsonSnippet.getJSONObject("thumbnails");
-                        JSONObject jsonMedium = jsonThumbnail.getJSONObject("medium");
-                        url = jsonMedium.getString("url");
-                        JSONObject jsonResourceID = jsonSnippet.getJSONObject("resourceId");
-                        idVideo = jsonResourceID.getString("videoId");
-                        videos.add(new Video(idVideo, title, url));
+        if (!isInternetAvailable()) {
+            dialogNetwork();
+        } else {
+            progressDialog.show();
+            final RequestQueue requestQueue = Volley.newRequestQueue(getContext());
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    if (progressDialog.isShowing()) progressDialog.cancel();
+                    videos.clear();
+                    try {
+                        JSONArray jsonItems = response.getJSONArray("items");
+                        String title = "";
+                        String url = "";
+                        String idVideo = "";
+                        for (int i = 0; i < jsonItems.length(); i++) {
+                            JSONObject jsonItem = jsonItems.getJSONObject(i);
+                            JSONObject jsonSnippet = jsonItem.getJSONObject("snippet");
+                            title = jsonSnippet.getString("title");
+                            JSONObject jsonThumbnail = jsonSnippet.getJSONObject("thumbnails");
+                            JSONObject jsonMedium = jsonThumbnail.getJSONObject("medium");
+                            url = jsonMedium.getString("url");
+                            JSONObject jsonResourceID = jsonSnippet.getJSONObject("resourceId");
+                            idVideo = jsonResourceID.getString("videoId");
+                            videos.add(new Video(idVideo, title, url));
 
-                    }
-                    adapter.notifyDataSetChanged();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(getContext(), "Lỗi!!", Toast.LENGTH_SHORT).show();
+                        }
+                        adapter.notifyDataSetChanged();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
                 }
-        );
-        requestQueue.add(jsonObjectRequest);
+            },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            Toast.makeText(getContext(), "Lỗi!!", Toast.LENGTH_SHORT).show();
+                            progressDialog.cancel();
+                            dialogNetwork();
+                        }
+                    }
+            );
+            requestQueue.add(jsonObjectRequest);
+        }
     }
 }

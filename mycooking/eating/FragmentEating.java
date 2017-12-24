@@ -99,6 +99,9 @@ public class FragmentEating extends BaseFragment {
     }
 
     private void getDataJsonArrayEating() {
+        if (!isInternetAvailable()) {
+            dialogNetwork();
+        } else {
             progressDialog.show();
             RequestParams params = new RequestParams();
             client.get(getContext(), "https://myteamhus1997.000webhostapp.com/CNPM/getEating/idType/" + idType, params, new JsonHttpResponseHandler() {
@@ -122,7 +125,8 @@ public class FragmentEating extends BaseFragment {
                     dialogNetwork();
                 }
             });
-        client.setTimeout(10000);
+            client.setTimeout(10000);
+        }
     }
 
     private void getDataEating() {
@@ -152,11 +156,7 @@ public class FragmentEating extends BaseFragment {
         }
         adapter.notifyDataSetChanged();
         if ((eatings.size() < count)) {
-            if (!isInternetAvailable()) {
-                dialogNetwork();
-            } else {
-                getDataJsonArrayEating();
-            }
+            getDataJsonArrayEating();
         }
     }
 
